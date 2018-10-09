@@ -1,0 +1,571 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Optimization &mdash; Fathom 2.7 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/tweaks.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="Fathom 2.7 documentation" href="index.html"/>
+        <link rel="next" title="Fnode Reference" href="fnodes.html"/>
+        <link rel="prev" title="Clustering" href="clustering.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Fathom
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.7
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using.html">Basic Use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ruleset.html">Rule and Ruleset Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering.html">Clustering</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-annealer">The Annealer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-corpus-framework">The Corpus Framework</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#corpus-framework-reference">Corpus Framework Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fnodes.html">Fnode Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utility Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versions.html">Version History</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Fathom</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Optimization</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/optimization.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="optimization">
+<h1>Optimization<a class="headerlink" href="#optimization" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is now <a class="reference external" href="https://addons.mozilla.org/en-US/firefox/addon/fathomfox/">an in-browser GUI for optimizating rulesets</a>. It runs faster and has easy access to more sources of signal. You&#8217;re almost certainly better off using it than writing custom code against the below APIs.</p>
+</div>
+<p>Selecting the optimal <a class="reference internal" href="ruleset.html#score" title="score"><code class="xref js js-func docutils literal"><span class="pre">score()</span></code></a> coefficients in a complex ruleset is tricky, but it can have a huge effect on accuracy. Manual tweaking, supported by a laboriously constructed test harness, becomes untenable with more than a few coefficients, so we recommend letting the machine figure them out.</p>
+<div class="section" id="the-annealer">
+<h2>The Annealer<a class="headerlink" href="#the-annealer" title="Permalink to this headline">¶</a></h2>
+<p>To prepare your ruleset for automatic optimization, replace its scoring and other scaling constants with JS variables, and wrap it in a function which takes a series of values and plops them into those variables:</p>
+<blockquote>
+<div><div class="highlight-js"><div class="highlight"><pre><span></span><span class="cm">/**</span>
+<span class="cm"> * @return A ruleset for extracting the paragraph with the most textual</span>
+<span class="cm"> * content.</span>
+<span class="cm"> */</span>
+<span class="kd">function</span> <span class="nx">tunedRuleset</span><span class="p">(</span><span class="nx">coeffLength</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+                      <span class="nx">coeffParagraphTag</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                      <span class="nx">coeffLinkDensity</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// If you use the best coefficients you&#39;ve found so far as default</span>
+    <span class="c1">// arg values, it makes tunedRuleset() a convenient production API</span>
+    <span class="c1">// while allowing for future optimization runs.</span>
+
+    <span class="kd">function</span> <span class="nx">scoreByLength</span><span class="p">(</span><span class="nx">fnode</span><span class="p">)</span> <span class="p">{</span>
+<span class="hll">        <span class="kr">const</span> <span class="nx">length</span> <span class="o">=</span> <span class="nx">inlineTextLength</span><span class="p">(</span><span class="nx">fnode</span><span class="p">.</span><span class="nx">element</span><span class="p">)</span> <span class="o">*</span> <span class="nx">coeffLength</span><span class="p">;</span>
+</span>        <span class="k">return</span> <span class="p">{</span><span class="nx">score</span><span class="o">:</span> <span class="nx">length</span><span class="p">};</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">ruleset</span><span class="p">(</span>
+        <span class="nx">rule</span><span class="p">(</span><span class="nx">dom</span><span class="p">(</span><span class="s1">&#39;p,div,li,code,blockquote,pre,h1,h2,h3,h4,h5,h6&#39;</span><span class="p">),</span>
+             <span class="nx">props</span><span class="p">(</span><span class="nx">scoreByLength</span><span class="p">).</span><span class="nx">type</span><span class="p">(</span><span class="s1">&#39;paragraphish&#39;</span><span class="p">)),</span>
+        <span class="nx">rule</span><span class="p">(</span><span class="nx">type</span><span class="p">(</span><span class="s1">&#39;paragraphish&#39;</span><span class="p">),</span>
+<span class="hll">             <span class="nx">score</span><span class="p">(</span><span class="nx">fnode</span> <span class="p">=&gt;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="nx">linkDensity</span><span class="p">(</span><span class="nx">fnode</span><span class="p">))</span> <span class="o">*</span> <span class="nx">coeffLinkDensity</span><span class="p">)),</span>
+</span>        <span class="nx">rule</span><span class="p">(</span><span class="nx">dom</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">),</span>
+<span class="hll">             <span class="nx">score</span><span class="p">(</span><span class="nx">coeffParagraphTag</span><span class="p">).</span><span class="nx">type</span><span class="p">(</span><span class="s1">&#39;paragraphish&#39;</span><span class="p">)),</span>
+</span>        <span class="nx">rule</span><span class="p">(</span><span class="nx">type</span><span class="p">(</span><span class="s1">&#39;paragraphish&#39;</span><span class="p">).</span><span class="nx">max</span><span class="p">(),</span>
+             <span class="nx">out</span><span class="p">(</span><span class="s1">&#39;longestParagraph&#39;</span><span class="p">))</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Fathom provides a numerical optimizer based on <a class="reference external" href="https://en.wikipedia.org/wiki/Simulated_Annealing">simulated annealing</a>. This algorithm is a particularly good fit for the <a class="reference external" href="https://en.wikipedia.org/wiki/Step_function">staircase functions</a> that commonly come up when measuring the efficacy of Fathom output <a class="footnote-reference" href="#id2" id="id1">[1]</a>. Continuous methods like <a class="reference external" href="https://en.wikipedia.org/wiki/Powell%27s_method">Powell&#8217;s</a> tend to sit in the middle of a stair, look to the right, look to the left, see no improvement, and declare premature victory, while annealing has enough randomness to shake itself out of such local minima.</p>
+<p>Fathom&#8217;s optimizer is exposed as an abstract class in <code class="docutils literal"><span class="pre">fathom-web/optimizers</span></code>:</p>
+<dl class="class">
+<dt id="Annealer">
+<em class="property">class </em><code class="descname">Annealer</code><span class="sig-paren">(</span><em>initialTemperature</em>, <em>coolingSteps</em>, <em>coolingFraction</em>, <em>stepsPerTemp</em><span class="sig-paren">)</span><a class="headerlink" href="#Annealer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base for simulated annealing runs</p>
+<p>This works for fitness functions which are staircase functions, made of
+vertical falloffs and flat horizontal regions, where continuous numerical
+optimization methods get stuck. It starts off looking far afield for global
+minima and gradually shifts its focus to the best local one as time
+progresses.</p>
+<p>More technically, we look around at random for changes that reduce the value
+of the cost function. Occasionally, a random change that increases cost is
+incorporated. The chance of incorporating a cost-increasing change lessens
+as the algorithim progresses.</p>
+<dl class="function">
+<dt id="anneal">
+<code class="descname">anneal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#anneal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterate over a variety of random solutions for a finite time, and return
+the best we come up with.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>Array.&lt;number&gt;</strong> &#8211; Coefficients we arrived at</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="initialSolution">
+<code class="descname">initialSolution</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#initialSolution" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>Array.&lt;number&gt;</strong> &#8211; Coefficients to begin the random walk from. The quality of this solution is not very important.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="randomTransition">
+<code class="descname">randomTransition</code><span class="sig-paren">(</span><em>coeffs</em><span class="sig-paren">)</span><a class="headerlink" href="#randomTransition" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>Array.&lt;number&gt;</strong> &#8211; Coefficients randomly changed slightly from the passed-in ones</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="solutionCost">
+<code class="descname">solutionCost</code><span class="sig-paren">(</span><em>coeffs</em><span class="sig-paren">)</span><a class="headerlink" href="#solutionCost" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>number</strong> &#8211; A cost estimate for the passed-in solution, on an arbitrary scale. Lower signifies a better solution.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<p>The last 3 methods are yours to fill in. Don&#8217;t try to be clever about them; it&#8217;s better to come up with something that runs quickly, because the annealer runs many thousand iterations by default. These simple parametrizations are not unreasonable for the toy ruleset above:</p>
+<blockquote>
+<div><div class="highlight-js"><div class="highlight"><pre><span></span><span class="kr">const</span> <span class="p">{</span><span class="nx">Annealer</span><span class="p">}</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;../optimizers&#39;</span><span class="p">);</span>
+
+<span class="kr">class</span> <span class="nx">LongestParagraphTuner</span> <span class="kr">extends</span> <span class="nx">Annealer</span> <span class="p">{</span>
+    <span class="nx">initialSolution</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">];</span>
+    <span class="p">}</span>
+
+    <span class="cm">/** Nudge a random coefficient in a random direction by 0.5. */</span>
+    <span class="nx">randomTransition</span><span class="p">(</span><span class="nx">coeffs</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kr">const</span> <span class="nx">ret</span> <span class="o">=</span> <span class="nx">coeffs</span><span class="p">.</span><span class="nx">slice</span><span class="p">();</span>  <span class="c1">// Make a copy.</span>
+        <span class="nx">ret</span><span class="p">[</span><span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="nx">coeffs</span><span class="p">.</span><span class="nx">length</span><span class="p">)]</span> <span class="o">+=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">?</span> <span class="o">-</span><span class="mf">.5</span> <span class="o">:</span> <span class="mf">.5</span><span class="p">;</span>
+        <span class="k">return</span> <span class="nx">ret</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="cm">/**</span>
+<span class="cm">     * Loop through a list of documents whose longest paragraphs (or whatever</span>
+<span class="cm">     * you&#39;re looking for) we already know, run the ruleset over them, and bump</span>
+<span class="cm">     * up the cost each time it comes up with something different.</span>
+<span class="cm">     */</span>
+    <span class="nx">solutionCost</span><span class="p">(</span><span class="nx">coeffs</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">let</span> <span class="nx">cost</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="p">[</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">knownBestParagraph</span><span class="p">]</span> <span class="k">of</span> <span class="nx">aListOfKnownGoodSolutions</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">tunedRuleset</span><span class="p">(...</span><span class="nx">coeffs</span><span class="p">)</span>
+                    <span class="p">.</span><span class="nx">against</span><span class="p">(</span><span class="nx">doc</span><span class="p">)</span>
+                    <span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;longestParagraph&#39;</span><span class="p">)</span>
+                    <span class="p">.</span><span class="nx">textContent</span> <span class="o">!==</span> <span class="nx">knownBestParagraph</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">cost</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">cost</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Then all you have to do is run the annealer, and go have a sandwich:</p>
+<blockquote>
+<div><div class="highlight-js"><div class="highlight"><pre><span></span><span class="kr">const</span> <span class="nx">annealer</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LongestParagraphTuner</span><span class="p">();</span>
+<span class="kr">const</span> <span class="nx">coeffs</span> <span class="o">=</span> <span class="nx">annealer</span><span class="p">.</span><span class="nx">anneal</span><span class="p">();</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Tuned coefficients:&#39;</span><span class="p">,</span> <span class="nx">coeffs</span><span class="p">);</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>For a more complex, real-world example, see <a class="reference external" href="https://github.com/mozilla/fathom/blob/master/examples/readability.js">readability.js in the examples folder</a>.</p>
+</div>
+<div class="section" id="the-corpus-framework">
+<h2>The Corpus Framework<a class="headerlink" href="#the-corpus-framework" title="Permalink to this headline">¶</a></h2>
+<p>Of course, this leaves open the question of how to loop over a collected corpus, the <code class="docutils literal"><span class="pre">aListOfKnownGoodSolutions</span></code> above. Fortunately, Fathom also includes a hierarchy of inversion-of-control classes that help frame your answer to this: <a class="reference internal" href="#Run" title="Run"><code class="xref js js-class docutils literal"><span class="pre">Run()</span></code></a>, <a class="reference internal" href="#Corpus" title="Corpus"><code class="xref js js-class docutils literal"><span class="pre">Corpus()</span></code></a>, and <a class="reference internal" href="#Sample" title="Sample"><code class="xref js js-class docutils literal"><span class="pre">Sample()</span></code></a>.</p>
+<p>We assume that your corpus is a folder of folders on disk, one inner folder for each member, or <em>sample</em>, of the corpus. The folder&#8217;s name is considered the name of the sample.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">theCorpus</span>
+    <span class="n">sampleOne</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">html</span>
+        <span class="o">...</span>
+    <span class="n">sampleTwo</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">html</span>
+        <span class="o">...</span>
+    <span class="n">sampleThree</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">html</span>
+        <span class="o">...</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Each sample folder contains these files:</p>
+<dl class="docutils">
+<dt><code class="docutils literal"><span class="pre">source.html</span></code></dt>
+<dd>The HTML of the captured page, UTF-8 encoded. Ideally, this should &#8220;hold still&#8221;, in that it shouldn&#8217;t have any JS that will run and mutate the page when you&#8217;re trying to examine it while designing your rules. JS will not, of course, be executed as the optimization harness itself runs over your corpus.</dd>
+<dt><code class="docutils literal"><span class="pre">whateverOtherFilesYouLike.foo</span></code></dt>
+<dd>You can add additional inputs if you like, like known-correct answers or captured metadata that is not expressed in <code class="docutils literal"><span class="pre">source.html</span></code> alone. You pull these into properties of your <a class="reference internal" href="#Sample" title="Sample"><code class="xref js js-class docutils literal"><span class="pre">Sample()</span></code></a> by overriding its constructor.</dd>
+</dl>
+<p>The job of your annealer&#8217;s <code class="docutils literal"><span class="pre">solutionCost</span></code> method is then to do a <em>run</em> over all the samples in your corpus, which can be represented like this:</p>
+<blockquote>
+<div><div class="highlight-js"><div class="highlight"><pre><span></span><span class="c1">// Load the corpus from disk.</span>
+<span class="nx">constructor</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kr">super</span><span class="p">();</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">corpus</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">LongestParagraphCorpus</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// Do a run over it, and see how the current coefficients determined by the</span>
+<span class="c1">// annealer scored.</span>
+<span class="nx">solutionCost</span><span class="p">(</span><span class="nx">coeffs</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nx">LongestParagraphRun</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">corpus</span><span class="p">,</span> <span class="nx">coeffs</span><span class="p">).</span><span class="nx">score</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>It&#8217;s up to you to implement the subclasses of <a class="reference internal" href="#Corpus" title="Corpus"><code class="xref js js-class docutils literal"><span class="pre">Corpus()</span></code></a> and <a class="reference internal" href="#Run" title="Run"><code class="xref js js-class docutils literal"><span class="pre">Run()</span></code></a>, as described below.</p>
+<div class="section" id="corpus-framework-reference">
+<h3>Corpus Framework Reference<a class="headerlink" href="#corpus-framework-reference" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="Run">
+<em class="property">class </em><code class="descname">Run</code><span class="sig-paren">(</span><em>corpus</em>, <em>coeffs</em><span class="sig-paren">)</span><a class="headerlink" href="#Run" title="Permalink to this definition">¶</a></dt>
+<dd><p>A run of a parametrized ruleset over an entire supervised corpus of pages</p>
+<p>Builds up a total score and reports it at the end.</p>
+<p>Run ruleset against every document in the corpus, and make the final
+score ready for retrieval by calling <a class="reference internal" href="ruleset.html#score" title="score"><code class="xref js js-func docutils literal"><span class="pre">score()</span></code></a> or <a class="reference internal" href="#humanScore" title="humanScore"><code class="xref js js-func docutils literal"><span class="pre">humanScore()</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>corpus</strong> (<a class="reference internal" href="#Corpus" title="Corpus"><em>Corpus</em></a>) &#8211; The documents over which to run the ruleset</li>
+<li><strong>coeffs</strong> (<em>Array.&lt;Number&gt;|undefined</em>) &#8211; The coefficients by which to parametrize the ruleset</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="score">
+<code class="descname">score</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#score" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the score for the optimizer to minimize. This should read from
+<code class="xref js js-attr docutils literal"><span class="pre">scoreParts</span></code> and return something as efficiently as possible,
+because the optimizer runs a lot of iterations.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="humanScore">
+<code class="descname">humanScore</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#humanScore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a human-readable score, for cosmetic reporting. Like
+<a class="reference internal" href="ruleset.html#score" title="score"><code class="xref js js-func docutils literal"><span class="pre">score()</span></code></a>, it should read from <code class="xref js js-attr docutils literal"><span class="pre">scoreParts</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Corpus">
+<em class="property">class </em><code class="descname">Corpus</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Corpus" title="Permalink to this definition">¶</a></dt>
+<dd><p>A reusable, caching representation of a group of samples</p>
+<p>This solves the problem of jsdom leaking on repeated instantiation and of
+the performance penalty inherent in re-parsing sample data.</p>
+<p>On construct, this loops across the folders inside <a class="reference internal" href="#baseFolder" title="baseFolder"><code class="xref js js-func docutils literal"><span class="pre">baseFolder()</span></code></a>,
+caching each as a <a class="reference internal" href="#Sample" title="Sample"><code class="xref js js-class docutils literal"><span class="pre">Sample()</span></code></a>.</p>
+<dl class="function">
+<dt id="baseFolder">
+<code class="descname">baseFolder</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#baseFolder" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>String</strong> &#8211; The path to the folder in which samples live.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sampleFromPath">
+<code class="descname">sampleFromPath</code><span class="sig-paren">(</span><em>sampleDirPath</em><span class="sig-paren">)</span><a class="headerlink" href="#sampleFromPath" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>Sample</strong> &#8211; A new <a class="reference internal" href="#Sample" title="Sample"><code class="xref js js-class docutils literal"><span class="pre">Sample()</span></code></a> subclass representing the sample embodied by the folder <code class="docutils literal"><span class="pre">sampleDirPath</span></code></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="samples">
+<code class="descname">samples</code><a class="headerlink" href="#samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>An iterable of <a class="reference internal" href="#Sample" title="Sample"><code class="xref js js-class docutils literal"><span class="pre">Sample()</span></code></a> instances making up the corpus</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Sample">
+<em class="property">class </em><code class="descname">Sample</code><span class="sig-paren">(</span><em>sampleDir</em><span class="sig-paren">)</span><a class="headerlink" href="#Sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>One item in a corpus of training or testing data</p>
+<p>This assumes a folder surrounds the sample and contains a <code class="docutils literal"><span class="pre">source.html</span></code>
+file containing markup we want to make use of. This lands in <a class="reference internal" href="#doc" title="doc"><code class="xref js js-attr docutils literal"><span class="pre">doc</span></code></a>.
+<a class="reference internal" href="#name" title="name"><code class="xref js js-attr docutils literal"><span class="pre">name</span></code></a> contains the name of the folder. Override the constructor to
+pull in additional information you&#8217;re interested in.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>sampleDir</strong> (<em>String</em>) &#8211; Path to the folder representing the sample, containing <code class="docutils literal"><span class="pre">source.html</span></code> and other files at your discretion</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="doc">
+<code class="descname">doc</code><a class="headerlink" href="#doc" title="Permalink to this definition">¶</a></dt>
+<dd><p>The DOM of the HTML document I represent</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="name">
+<code class="descname">name</code><a class="headerlink" href="#name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the folder this sample came from</p>
+</dd></dl>
+
+</dd></dl>
+
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>This assumes a cost function which has sudden jumps, like when measuring the hard-edged inclusion or exclusion of nodes in the final output. If you can contrive a smoother one which, for instance, examines scores on nodes before they pass through hard-edged thresholds like <a class="reference internal" href="ruleset.html#max" title="max"><code class="xref js js-func docutils literal"><span class="pre">max()</span></code></a>, you may be able to take advantage of a continuous optimization method to get better or quicker results.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fnodes.html" class="btn btn-neutral float-right" title="Fnode Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="clustering.html" class="btn btn-neutral" title="Clustering" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Mozilla Foundation.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'2.7',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
